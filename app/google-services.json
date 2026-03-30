@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "58859805496",
+    "project_id": "giga-chat-pet",
+    "storage_bucket": "giga-chat-pet.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:58859805496:android:2022bc3cc609602ed97fcd",
+        "android_client_info": {
+          "package_name": "com.example.giga_chat_pet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1PSMUZMEV2ChSFNmZrpIN8HtWQL5i53g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
