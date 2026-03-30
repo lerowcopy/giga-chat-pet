@@ -1,0 +1,7 @@
+# local.properties — НЕ коммитить в git!
+
+# Authorization Key из личного кабинета GigaChat (Base64 ClientID:ClientSecret)
+GIGACHAT_AUTH_KEY=MDE5ZDQwNzUtZTdjMC03MThiLWJhMDIt...
+
+# Scope: GIGACHAT_API_PERS (физлицо) или GIGACHAT_API_CORP (юрлицо)
+GIGACHAT_SCOPE=GIGACHAT_API_PERS
