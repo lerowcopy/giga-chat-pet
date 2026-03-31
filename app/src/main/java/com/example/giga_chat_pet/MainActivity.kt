@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     if (isChecked) {
-                        val startDestination = if (isLoggedIn) Screen.Main.route else Screen.Login.route
+                        val startDestination = if (isLoggedIn) Screen.ChatList.route else Screen.Login.route
                         AppNavGraph(navController = navController, startDestination = startDestination)
                     }
                 }
