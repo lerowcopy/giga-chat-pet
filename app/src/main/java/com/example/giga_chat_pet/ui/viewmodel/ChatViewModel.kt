@@ -22,7 +22,8 @@ data class ChatUiState(
 )
 
 class ChatViewModel(
-    private val repository: ChatRepository
+    private val repository: ChatRepository,
+    private val conversationId: Long
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -34,7 +35,7 @@ class ChatViewModel(
 
     private fun loadMessages() {
         viewModelScope.launch {
-            repository.getMessages().collect { messages ->
+            repository.getMessagesByConversationId(conversationId).collect { messages ->
                 _uiState.update { currentState ->
                     currentState.copy(messages = messages)
                 }
@@ -50,7 +51,32 @@ class ChatViewModel(
             _uiState.update { it.copy(isLoading = true, error = null, inputText = "") }
 
             val currentMessages = _uiState.value.messages
-            val result = repository.sendMessage(text, currentMessages)
+            val result = repository.sendMessage(text, currentMessages, conversationId)
+
+            result.fold(
+                onSuccess = {
+                    _uiState.update { it.copy(isLoading = false) }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = error.message ?: "Неизвестная ошибка"
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    fun retryFailedMessage(message: ChatMessage) {
+        if (_uiState.value.isLoading) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+
+            val currentMessages = _uiState.value.messages
+            val result = repository.retrySendMessage(message.id, message.text, currentMessages, conversationId)
 
             result.fold(
                 onSuccess = {
@@ -78,15 +104,15 @@ class ChatViewModel(
 
     fun clearHistory() {
         viewModelScope.launch {
-            repository.clearHistory()
+            repository.clearHistory(conversationId)
         }
     }
 
     companion object {
-        fun provideFactory(repository: ChatRepository): ViewModelProvider.Factory {
+        fun provideFactory(repository: ChatRepository, conversationId: Long): ViewModelProvider.Factory {
             return viewModelFactory {
                 initializer {
-                    ChatViewModel(repository)
+                    ChatViewModel(repository, conversationId)
                 }
             }
         }
