@@ -1,5 +1,6 @@
 package com.example.giga_chat_pet.ui.chat
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -41,6 +43,7 @@ import androidx.navigation.NavController
 import com.example.giga_chat_pet.data.local.ChatDatabase
 import com.example.giga_chat_pet.data.remote.GigaChatApi
 import com.example.giga_chat_pet.data.repository.ChatRepositoryImpl
+import com.example.giga_chat_pet.data.repository.ConversationRepositoryImpl
 import com.example.giga_chat_pet.domain.model.ChatMessage
 import com.example.giga_chat_pet.domain.model.MessageStatus
 import com.example.giga_chat_pet.ui.viewmodel.ChatUiState
@@ -50,13 +53,19 @@ import com.example.giga_chat_pet.ui.viewmodel.ChatViewModel
 @Composable
 fun ChatScreen(
     navController: NavController,
+    conversationId: Long,
     modifier: Modifier = Modifier,
+    context: Context = LocalContext.current,
     viewModel: ChatViewModel = viewModel(
         factory = ChatViewModel.provideFactory(
             ChatRepositoryImpl(
-                api = GigaChatApi.create(navController.context),
-                database = ChatDatabase.getDatabase(navController.context)
-            )
+                api = GigaChatApi.create(context),
+                database = ChatDatabase.getDatabase(context),
+                conversationRepository = ConversationRepositoryImpl(
+                    database = ChatDatabase.getDatabase(context)
+                )
+            ),
+            conversationId
         )
     )
 ) {
@@ -147,7 +156,7 @@ fun ChatScreen(
                 contentPadding = paddingValues
             ) {
                 items(uiState.messages, key = { it.id }) { message ->
-                    MessageBubble(message)
+                    MessageBubble(message, onRetryClick = { viewModel.retryFailedMessage(message) })
                 }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -160,7 +169,8 @@ fun ChatScreen(
 @Composable
 fun MessageBubble(
     message: ChatMessage,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRetryClick: () -> Unit = {}
 ) {
     Box(
         modifier = modifier
@@ -198,7 +208,7 @@ fun MessageBubble(
                 }
             )
             if (message.isFromMe) {
-                MessageStatusIcon(status = message.status)
+                MessageStatusIcon(status = message.status, onRetryClick = onRetryClick)
             }
         }
     }
@@ -207,21 +217,33 @@ fun MessageBubble(
 @Composable
 private fun MessageStatusIcon(
     status: MessageStatus,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRetryClick: () -> Unit = {}
 ) {
     val (icon, contentDescription) = when (status) {
         MessageStatus.SENDING -> Pair("⏳", "Отправка")
         MessageStatus.SENT -> Pair("✓", "Отправлено")
-        MessageStatus.ERROR -> Pair("✗", "Ошибка")
+        MessageStatus.ERROR -> Pair("⟳", "Повторить")
     }
-    Text(
-        text = icon,
-        modifier = modifier.padding(top = 4.dp, end = 4.dp),
-        style = MaterialTheme.typography.labelSmall,
-        color = when (status) {
-            MessageStatus.SENDING -> MaterialTheme.colorScheme.onSurfaceVariant
-            MessageStatus.SENT -> MaterialTheme.colorScheme.onPrimary
-            MessageStatus.ERROR -> MaterialTheme.colorScheme.error
+
+    if (status == MessageStatus.ERROR) {
+        IconButton(onClick = onRetryClick) {
+            Text(
+                text = icon,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
-    )
+    } else {
+        Text(
+            text = icon,
+            modifier = modifier.padding(top = 4.dp, end = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = when (status) {
+                MessageStatus.SENDING -> MaterialTheme.colorScheme.onSurfaceVariant
+                MessageStatus.SENT -> MaterialTheme.colorScheme.onPrimary
+                MessageStatus.ERROR -> MaterialTheme.colorScheme.error
+            }
+        )
+    }
 }
