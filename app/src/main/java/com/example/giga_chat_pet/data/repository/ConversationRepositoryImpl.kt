@@ -3,6 +3,7 @@ package com.example.giga_chat_pet.data.repository
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.map
 import com.example.giga_chat_pet.data.local.ChatDatabase
 import com.example.giga_chat_pet.data.local.LocalConversation
 import com.example.giga_chat_pet.data.local.LocalMessage
@@ -13,22 +14,29 @@ import com.example.giga_chat_pet.domain.model.MessageStatus
 import com.example.giga_chat_pet.domain.repository.ConversationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ConversationRepositoryImpl(
+@Singleton
+class ConversationRepositoryImpl @Inject constructor(
     private val database: ChatDatabase
 ) : ConversationRepository {
 
     private val conversationDao = database.conversationDao()
     private val messageDao = database.messageDao()
 
-    override fun getConversations(): Flow<PagingData<Conversation>> {
+    override fun getConversations(query: String?): Flow<PagingData<Conversation>> {
         return Pager(
             config = PagingConfig(
                 pageSize = 20,
                 enablePlaceholders = false
             ),
             pagingSourceFactory = {
-                conversationDao.getAllConversations()
+                if (query.isNullOrBlank()) {
+                    conversationDao.getAllConversations()
+                } else {
+                    conversationDao.searchConversations(query)
+                }
             }
         ).flow.map { pagingData ->
             pagingData.map { it.toDomainModel() }
@@ -47,6 +55,10 @@ class ConversationRepositoryImpl(
     override suspend fun deleteConversation(id: Long) {
         conversationDao.deleteConversation(id)
         messageDao.deleteMessagesByConversationId(id)
+    }
+
+    override suspend fun updateConversationTitle(id: Long, title: String) {
+        conversationDao.updateConversationTitle(id, title)
     }
 
     override suspend fun updateConversationLastMessage(

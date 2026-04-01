@@ -9,10 +9,14 @@ import com.example.giga_chat_pet.data.remote.GigaChatApi
 import com.example.giga_chat_pet.domain.model.ChatMessage
 import com.example.giga_chat_pet.domain.model.MessageStatus
 import com.example.giga_chat_pet.domain.repository.ChatRepository
+import com.example.giga_chat_pet.domain.repository.ConversationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ChatRepositoryImpl(
+@Singleton
+class ChatRepositoryImpl @Inject constructor(
     private val api: GigaChatApi,
     private val database: ChatDatabase,
     private val conversationRepository: ConversationRepository
