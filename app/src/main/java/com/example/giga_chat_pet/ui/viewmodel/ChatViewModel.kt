@@ -1,18 +1,18 @@
 package com.example.giga_chat_pet.ui.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.giga_chat_pet.domain.model.ChatMessage
 import com.example.giga_chat_pet.domain.model.MessageStatus
 import com.example.giga_chat_pet.domain.repository.ChatRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
@@ -21,10 +21,13 @@ data class ChatUiState(
     val inputText: String = ""
 )
 
-class ChatViewModel(
+@HiltViewModel
+class ChatViewModel @Inject constructor(
     private val repository: ChatRepository,
-    private val conversationId: Long
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val conversationId: Long = checkNotNull(savedStateHandle["conversationId"])
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
@@ -105,16 +108,6 @@ class ChatViewModel(
     fun clearHistory() {
         viewModelScope.launch {
             repository.clearHistory(conversationId)
-        }
-    }
-
-    companion object {
-        fun provideFactory(repository: ChatRepository, conversationId: Long): ViewModelProvider.Factory {
-            return viewModelFactory {
-                initializer {
-                    ChatViewModel(repository, conversationId)
-                }
-            }
         }
     }
 }

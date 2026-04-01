@@ -18,7 +18,9 @@ import com.example.giga_chat_pet.navigation.AppNavGraph
 import com.example.giga_chat_pet.navigation.Screen
 import com.example.giga_chat_pet.ui.theme.GigachatpetTheme
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
