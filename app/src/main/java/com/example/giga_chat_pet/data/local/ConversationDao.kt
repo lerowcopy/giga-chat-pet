@@ -12,6 +12,9 @@ interface ConversationDao {
     @Query("SELECT * FROM conversations ORDER BY lastMessageAt DESC")
     fun getAllConversations(): PagingSource<Int, LocalConversation>
 
+    @Query("SELECT * FROM conversations WHERE title LIKE '%' || :query || '%' ORDER BY lastMessageAt DESC")
+    fun searchConversations(query: String): PagingSource<Int, LocalConversation>
+
     @Query("SELECT * FROM conversations WHERE id = :id")
     suspend fun getConversationById(id: Long): LocalConversation?
 
@@ -20,6 +23,9 @@ interface ConversationDao {
 
     @Update
     suspend fun updateConversation(conversation: LocalConversation)
+
+    @Query("UPDATE conversations SET title = :title WHERE id = :id")
+    suspend fun updateConversationTitle(id: Long, title: String)
 
     @Query("DELETE FROM conversations WHERE id = :id")
     suspend fun deleteConversation(id: Long)
