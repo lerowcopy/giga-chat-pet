@@ -16,7 +16,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.focus.FocusDirection
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,7 +24,7 @@ import androidx.compose.ui.focus.FocusDirection
 fun LoginScreen(
     onNavigateToMain: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: LoginViewModel = viewModel()
+    viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current

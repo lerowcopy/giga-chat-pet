@@ -38,12 +38,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.giga_chat_pet.data.local.ChatDatabase
-import com.example.giga_chat_pet.data.remote.GigaChatApi
-import com.example.giga_chat_pet.data.repository.ChatRepositoryImpl
-import com.example.giga_chat_pet.data.repository.ConversationRepositoryImpl
 import com.example.giga_chat_pet.domain.model.ChatMessage
 import com.example.giga_chat_pet.domain.model.MessageStatus
 import com.example.giga_chat_pet.ui.viewmodel.ChatUiState
@@ -55,19 +51,7 @@ fun ChatScreen(
     navController: NavController,
     conversationId: Long,
     modifier: Modifier = Modifier,
-    context: Context = LocalContext.current,
-    viewModel: ChatViewModel = viewModel(
-        factory = ChatViewModel.provideFactory(
-            ChatRepositoryImpl(
-                api = GigaChatApi.create(context),
-                database = ChatDatabase.getDatabase(context),
-                conversationRepository = ConversationRepositoryImpl(
-                    database = ChatDatabase.getDatabase(context)
-                )
-            ),
-            conversationId
-        )
-    )
+    viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
