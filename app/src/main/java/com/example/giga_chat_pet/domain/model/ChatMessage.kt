@@ -7,9 +7,3 @@ data class ChatMessage(
     val timestamp: Long,
     val status: MessageStatus
 )
-
-enum class MessageStatus {
-    SENDING,
-    SENT,
-    ERROR
-}
