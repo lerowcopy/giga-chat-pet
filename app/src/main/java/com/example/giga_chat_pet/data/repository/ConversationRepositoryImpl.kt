@@ -8,6 +8,8 @@ import com.example.giga_chat_pet.data.local.ChatDatabase
 import com.example.giga_chat_pet.data.local.LocalConversation
 import com.example.giga_chat_pet.data.local.LocalMessage
 import com.example.giga_chat_pet.data.local.MessageStatus as LocalMessageStatus
+import com.example.giga_chat_pet.data.mapper.LocalConversationToConversation
+import com.example.giga_chat_pet.data.mapper.LocalMessageToChatMessage
 import com.example.giga_chat_pet.domain.model.ChatMessage
 import com.example.giga_chat_pet.domain.model.Conversation
 import com.example.giga_chat_pet.domain.model.MessageStatus
@@ -39,7 +41,7 @@ class ConversationRepositoryImpl @Inject constructor(
                 }
             }
         ).flow.map { pagingData ->
-            pagingData.map { it.toDomainModel() }
+            pagingData.map { LocalConversationToConversation.map(it) }
         }
     }
 
@@ -76,35 +78,7 @@ class ConversationRepositoryImpl @Inject constructor(
 
     override fun getConversationMessages(conversationId: Long): Flow<List<ChatMessage>> {
         return messageDao.getMessagesByConversationId(conversationId).map { entities ->
-            entities.map { it.toDomainModel() }
-        }
-    }
-
-    private fun LocalConversation.toDomainModel(): Conversation {
-        return Conversation(
-            id = id,
-            title = title,
-            createdAt = createdAt,
-            lastMessageAt = lastMessageAt,
-            lastMessageText = lastMessageText
-        )
-    }
-
-    private fun LocalMessage.toDomainModel(): ChatMessage {
-        return ChatMessage(
-            id = id,
-            text = text,
-            isFromMe = isFromMe,
-            timestamp = timestamp,
-            status = status.toDomainStatus()
-        )
-    }
-
-    private fun LocalMessageStatus.toDomainStatus(): MessageStatus {
-        return when (this) {
-            LocalMessageStatus.SENDING -> MessageStatus.SENDING
-            LocalMessageStatus.SENT -> MessageStatus.SENT
-            LocalMessageStatus.ERROR -> MessageStatus.ERROR
+            entities.map { LocalMessageToChatMessage.map(it) }
         }
     }
 }

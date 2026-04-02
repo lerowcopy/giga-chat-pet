@@ -1,11 +1,12 @@
 package com.example.giga_chat_pet.data.repository
 
-import com.example.giga_chat_pet.data.local.ChatDatabase
+import com.example.giga_chat_pet.data.api.ChatApiService
 import com.example.giga_chat_pet.data.local.LocalMessage
 import com.example.giga_chat_pet.data.local.MessageStatus as LocalMessageStatus
+import com.example.giga_chat_pet.data.mapper.ChatMessageMapper
 import com.example.giga_chat_pet.data.model.ChatRequest
 import com.example.giga_chat_pet.data.model.MessageDto
-import com.example.giga_chat_pet.data.remote.GigaChatApi
+import com.example.giga_chat_pet.data.storage.MessageStorage
 import com.example.giga_chat_pet.domain.model.ChatMessage
 import com.example.giga_chat_pet.domain.model.MessageStatus
 import com.example.giga_chat_pet.domain.repository.ChatRepository
@@ -17,22 +18,20 @@ import javax.inject.Singleton
 
 @Singleton
 class ChatRepositoryImpl @Inject constructor(
-    private val api: GigaChatApi,
-    private val database: ChatDatabase,
+    private val apiService: ChatApiService,
+    private val messageStorage: MessageStorage,
     private val conversationRepository: ConversationRepository
 ) : ChatRepository {
 
-    private val dao = database.messageDao()
-
     override fun getMessages(): Flow<List<ChatMessage>> {
-        return dao.getAllMessages().map { entities ->
-            entities.map { it.toDomainModel() }
+        return messageStorage.getAllMessages().map { messages ->
+            messages.map { ChatMessageMapper.toDomain(it) }
         }
     }
 
     override fun getMessagesByConversationId(conversationId: Long): Flow<List<ChatMessage>> {
-        return dao.getMessagesByConversationId(conversationId).map { entities ->
-            entities.map { it.toDomainModel() }
+        return messageStorage.getMessagesByConversationId(conversationId).map { messages ->
+            messages.map { ChatMessageMapper.toDomain(it) }
         }
     }
 
@@ -82,10 +81,10 @@ class ChatRepositoryImpl @Inject constructor(
                 status = LocalMessageStatus.SENDING,
                 conversationId = conversationId
             )
-            dao.insertMessage(userMessage)
+            messageStorage.insertMessage(userMessage)
         }
 
-        dao.updateMessageStatus(userMessageId, LocalMessageStatus.SENDING)
+        messageStorage.updateMessageStatus(userMessageId, LocalMessageStatus.SENDING)
 
         val messagesForApi = conversationHistory
             .takeLast(10)
@@ -93,7 +92,7 @@ class ChatRepositoryImpl @Inject constructor(
             .plus(MessageDto.user(text))
 
         return try {
-            val response = api.sendMessage(
+            val response = apiService.sendMessage(
                 ChatRequest(
                     model = "GigaChat",
                     messages = messagesForApi
@@ -103,7 +102,7 @@ class ChatRepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body() != null) {
                 val assistantText = response.body()!!.choices.first().message.content
 
-                dao.updateMessageStatus(userMessageId, LocalMessageStatus.SENT)
+                messageStorage.updateMessageStatus(userMessageId, LocalMessageStatus.SENT)
 
                 val assistantMessage = LocalMessage(
                     text = assistantText,
@@ -111,7 +110,7 @@ class ChatRepositoryImpl @Inject constructor(
                     status = LocalMessageStatus.SENT,
                     conversationId = conversationId
                 )
-                dao.insertMessage(assistantMessage)
+                messageStorage.insertMessage(assistantMessage)
 
                 conversationRepository.updateConversationLastMessage(
                     id = conversationId,
@@ -119,7 +118,7 @@ class ChatRepositoryImpl @Inject constructor(
                     timestamp = System.currentTimeMillis()
                 )
 
-                Result.success(assistantMessage.toDomainModel())
+                Result.success(ChatMessageMapper.toDomain(assistantMessage))
             } else {
                 val error = Exception("API error: ${response.code()} ${response.message()}")
                 handleSendError(userMessageId, text, conversationHistory, error, retryCount, maxRetries, baseDelayMs, conversationId)
@@ -144,42 +143,21 @@ class ChatRepositoryImpl @Inject constructor(
             kotlinx.coroutines.delay(delayMs)
             sendMessageWithRetry(text, conversationHistory, messageId, retryCount + 1, conversationId)
         } else {
-            dao.updateMessageStatus(messageId, LocalMessageStatus.ERROR)
+            messageStorage.updateMessageStatus(messageId, LocalMessageStatus.ERROR)
             Result.failure(error)
         }
     }
 
     override suspend fun updateMessageStatus(id: Long, status: MessageStatus) {
-        dao.updateMessageStatus(id, status.toLocalStatus())
-    }
-
-    override suspend fun clearHistory(conversationId: Long) {
-        dao.deleteMessagesByConversationId(conversationId)
-    }
-
-    private fun LocalMessage.toDomainModel(): ChatMessage {
-        return ChatMessage(
-            id = id,
-            text = text,
-            isFromMe = isFromMe,
-            timestamp = timestamp,
-            status = status.toDomainStatus()
-        )
-    }
-
-    private fun LocalMessageStatus.toDomainStatus(): MessageStatus {
-        return when (this) {
-            LocalMessageStatus.SENDING -> MessageStatus.SENDING
-            LocalMessageStatus.SENT -> MessageStatus.SENT
-            LocalMessageStatus.ERROR -> MessageStatus.ERROR
-        }
-    }
-
-    private fun MessageStatus.toLocalStatus(): LocalMessageStatus {
-        return when (this) {
+        val localStatus = when (status) {
             MessageStatus.SENDING -> LocalMessageStatus.SENDING
             MessageStatus.SENT -> LocalMessageStatus.SENT
             MessageStatus.ERROR -> LocalMessageStatus.ERROR
         }
+        messageStorage.updateMessageStatus(id, localStatus)
+    }
+
+    override suspend fun clearHistory(conversationId: Long) {
+        messageStorage.deleteMessagesByConversationId(conversationId)
     }
 }
