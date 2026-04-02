@@ -9,18 +9,33 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [LocalMessage::class, LocalConversation::class],
-    version = 2,
+    entities = [LocalMessage::class, LocalConversation::class, UserProfileData::class],
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class ChatDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun conversationDao(): ConversationDao
+    abstract fun userProfileDao(): UserProfileDao
 
     companion object {
         @Volatile
         private var INSTANCE: ChatDatabase? = null
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `user_profile` (
+                        `uid` TEXT PRIMARY KEY NOT NULL,
+                        `email` TEXT NOT NULL,
+                        `displayName` TEXT,
+                        `photoUrl` TEXT,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                """)
+            }
+        }
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -74,7 +89,7 @@ abstract class ChatDatabase : RoomDatabase() {
                     ChatDatabase::class.java,
                     "chat_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                 INSTANCE = instance
                 instance
