@@ -3,9 +3,15 @@ package com.example.giga_chat_pet.ui.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.giga_chat_pet.domain.model.ChatMessage
 import com.example.giga_chat_pet.domain.model.MessageStatus
-import com.example.giga_chat_pet.domain.repository.ChatRepository
+import com.example.giga_chat_pet.domain.usecase.ClearChatHistoryUseCase
+import com.example.giga_chat_pet.domain.usecase.GetMessagesUseCase
+import com.example.giga_chat_pet.domain.usecase.RetrySendMessageUseCase
+import com.example.giga_chat_pet.domain.usecase.SendMessageUseCase
+import com.example.giga_chat_pet.presentation.chat.ChatUiState
+import com.example.giga_chat_pet.presentation.mapper.ChatMessageToUiModel
+import com.example.giga_chat_pet.presentation.mapper.MessageStatusMapper
+import com.example.giga_chat_pet.presentation.renderer.MarkdownRenderer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,16 +20,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class ChatUiState(
-    val messages: List<ChatMessage> = emptyList(),
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val inputText: String = ""
-)
-
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    private val repository: ChatRepository,
+    private val getMessagesUseCase: GetMessagesUseCase,
+    private val sendMessageUseCase: SendMessageUseCase,
+    private val retrySendMessageUseCase: RetrySendMessageUseCase,
+    private val clearChatHistoryUseCase: ClearChatHistoryUseCase,
+    private val markdownRenderer: MarkdownRenderer,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -38,9 +41,9 @@ class ChatViewModel @Inject constructor(
 
     private fun loadMessages() {
         viewModelScope.launch {
-            repository.getMessagesByConversationId(conversationId).collect { messages ->
+            getMessagesUseCase(conversationId).collect { messages ->
                 _uiState.update { currentState ->
-                    currentState.copy(messages = messages)
+                    currentState.copy(messages = messages.map { ChatMessageToUiModel.map(it) })
                 }
             }
         }
@@ -53,8 +56,17 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, inputText = "") }
 
-            val currentMessages = _uiState.value.messages
-            val result = repository.sendMessage(text, currentMessages, conversationId)
+            val currentMessages = _uiState.value.messages.map { model ->
+                com.example.giga_chat_pet.domain.model.ChatMessage(
+                    id = model.id,
+                    text = model.text,
+                    isFromMe = model.isFromMe,
+                    timestamp = model.timestamp,
+                    status = MessageStatusMapper.toDomain(model.status)
+                )
+            }
+
+            val result = sendMessageUseCase(text, conversationId, currentMessages)
 
             result.fold(
                 onSuccess = {
@@ -72,14 +84,23 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun retryFailedMessage(message: ChatMessage) {
+    fun retryFailedMessage(messageId: Long, text: String) {
         if (_uiState.value.isLoading) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            val currentMessages = _uiState.value.messages
-            val result = repository.retrySendMessage(message.id, message.text, currentMessages, conversationId)
+            val currentMessages = _uiState.value.messages.map { model ->
+                com.example.giga_chat_pet.domain.model.ChatMessage(
+                    id = model.id,
+                    text = model.text,
+                    isFromMe = model.isFromMe,
+                    timestamp = model.timestamp,
+                    status = MessageStatusMapper.toDomain(model.status)
+                )
+            }
+
+            val result = retrySendMessageUseCase(messageId, text, conversationId, currentMessages)
 
             result.fold(
                 onSuccess = {
@@ -107,7 +128,9 @@ class ChatViewModel @Inject constructor(
 
     fun clearHistory() {
         viewModelScope.launch {
-            repository.clearHistory(conversationId)
+            clearChatHistoryUseCase(conversationId)
         }
     }
+
+    fun getMarkdownRenderer(): MarkdownRenderer = markdownRenderer
 }
