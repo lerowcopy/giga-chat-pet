@@ -1,7 +1,7 @@
 package com.example.giga_chat_pet.di
 
 import android.content.Context
-import com.example.giga_chat_pet.BuildConfig
+import com.example.giga_chat_pet.data.api.ChatApiService
 import com.example.giga_chat_pet.data.remote.TokenApi
 import com.example.giga_chat_pet.data.remote.TokenManager
 import com.example.giga_chat_pet.data.remote.buildSslOkHttpClient
@@ -13,7 +13,6 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.util.UUID
 import javax.inject.Singleton
 
 @Module
@@ -56,6 +55,38 @@ object NetworkModule {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(com.example.giga_chat_pet.data.remote.GigaChatApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideChatApiService(
+        @ApplicationContext context: Context,
+        tokenManager: TokenManager
+    ): ChatApiService {
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+
+        val authInterceptor = okhttp3.Interceptor { chain ->
+            val token = kotlinx.coroutines.runBlocking { tokenManager.getValidToken() }
+            val request = chain.request().newBuilder()
+                .addHeader("Authorization", "Bearer $token")
+                .addHeader("Content-Type", "application/json")
+                .build()
+            chain.proceed(request)
+        }
+
+        val client = buildSslOkHttpClient(context)
+            .addInterceptor(loggingInterceptor)
+            .addInterceptor(authInterceptor)
+            .build()
+
+        return Retrofit.Builder()
+            .baseUrl("https://gigachat.devices.sberbank.ru/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ChatApiService::class.java)
     }
 
     @Provides

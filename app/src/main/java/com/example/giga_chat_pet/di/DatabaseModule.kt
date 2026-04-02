@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.giga_chat_pet.data.local.ChatDatabase
 import com.example.giga_chat_pet.data.local.ConversationDao
 import com.example.giga_chat_pet.data.local.MessageDao
+import com.example.giga_chat_pet.data.storage.MessageStorage
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,5 +30,11 @@ object DatabaseModule {
     @Provides
     fun provideConversationDao(database: ChatDatabase): ConversationDao {
         return database.conversationDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMessageStorage(messageDao: MessageDao): MessageStorage {
+        return MessageStorage(messageDao)
     }
 }
