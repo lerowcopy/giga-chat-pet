@@ -1,8 +1,9 @@
 package com.example.giga_chat_pet.ui.chatlist
 
-import android.content.Context
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,30 +16,44 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.giga_chat_pet.data.local.ChatDatabase
-import com.example.giga_chat_pet.data.repository.ConversationRepositoryImpl
-import com.example.giga_chat_pet.domain.model.Conversation
+import com.example.giga_chat_pet.presentation.chatlist.ConversationUiModel
 import com.example.giga_chat_pet.ui.viewmodel.ChatListViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -48,22 +63,65 @@ import java.util.Locale
 fun ChatListScreen(
     modifier: Modifier = Modifier,
     onNavigateToChat: (Long) -> Unit,
-    context: Context = LocalContext.current,
-    viewModel: ChatListViewModel = viewModel(
-        factory = ChatListViewModel.provideFactory(
-            ConversationRepositoryImpl(
-                database = ChatDatabase.getDatabase(context)
-            )
-        )
-    )
+    viewModel: ChatListViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val conversations = uiState.conversations.collectAsLazyPagingItems()
+    val conversations = viewModel.conversations.collectAsLazyPagingItems()
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearchActive by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editingConversation by remember { mutableStateOf<ConversationUiModel?>(null) }
+    var editTitle by remember { mutableStateOf("") }
+
+    LaunchedEffect(isSearchActive) {
+        if (isSearchActive) {
+            focusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(searchQuery) {
+        viewModel.search(searchQuery)
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Чаты") }
+                title = {
+                    if (isSearchActive) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Поиск...") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequester),
+                            maxLines = 1,
+                            shape = RoundedCornerShape(25),
+                            singleLine = true
+                        )
+                    } else {
+                        Text("Чаты")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        isSearchActive = !isSearchActive
+                        if (!isSearchActive) {
+                            searchQuery = ""
+                        }
+                    }) {
+                        Icon(
+                            painter = painterResource(
+                                if (isSearchActive) android.R.drawable.ic_menu_close_clear_cancel
+                                else android.R.drawable.ic_menu_search
+                            ),
+                            contentDescription = if (isSearchActive) "Закрыть поиск" else "Поиск",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -138,7 +196,12 @@ fun ChatListScreen(
                         conversations[index]?.let { conversation ->
                             ConversationItem(
                                 conversation = conversation,
-                                onClick = { onNavigateToChat(conversation.id) }
+                                onClick = { onNavigateToChat(conversation.id) },
+                                onLongClick = {
+                                    editingConversation = conversation
+                                    editTitle = conversation.title
+                                    showEditDialog = true
+                                }
                             )
                         }
                     }
@@ -173,18 +236,45 @@ fun ChatListScreen(
             }
         }
     }
+
+    if (showEditDialog && editingConversation != null) {
+        EditConversationDialog(
+            title = editTitle,
+            onTitleChange = { editTitle = it },
+            onConfirm = {
+                viewModel.viewModelScope.launch {
+                    editingConversation?.let { conv ->
+                        viewModel.updateConversationTitle(conv.id, editTitle)
+                    }
+                }
+                showEditDialog = false
+                editingConversation = null
+                focusManager.clearFocus()
+            },
+            onDismiss = {
+                showEditDialog = false
+                editingConversation = null
+                focusManager.clearFocus()
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ConversationItem(
-    conversation: Conversation,
+    conversation: ConversationUiModel,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -256,4 +346,39 @@ private fun formatTimestamp(timestamp: Long): String {
             SimpleDateFormat("dd.MM.yy", Locale.getDefault()).format(Date(timestamp))
         }
     }
+}
+
+@Composable
+fun EditConversationDialog(
+    title: String,
+    onTitleChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Редактировать название") },
+        text = {
+            OutlinedTextField(
+                value = title,
+                onValueChange = onTitleChange,
+                placeholder = { Text("Название чата") },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 1,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onConfirm() })
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Сохранить")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена")
+            }
+        }
+    )
 }

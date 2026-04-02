@@ -1,6 +1,5 @@
 package com.example.giga_chat_pet.ui.chat
 
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,12 +37,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.giga_chat_pet.domain.model.ChatMessage
-import com.example.giga_chat_pet.domain.model.MessageStatus
-import com.example.giga_chat_pet.ui.viewmodel.ChatUiState
+import com.example.giga_chat_pet.presentation.chat.ChatMessageUiModel
+import com.example.giga_chat_pet.presentation.chat.MessageStatusUiModel
+import com.example.giga_chat_pet.presentation.renderer.MarkdownRenderer
 import com.example.giga_chat_pet.ui.viewmodel.ChatViewModel
+import android.widget.TextView
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -140,7 +142,10 @@ fun ChatScreen(
                 contentPadding = paddingValues
             ) {
                 items(uiState.messages, key = { it.id }) { message ->
-                    MessageBubble(message, onRetryClick = { viewModel.retryFailedMessage(message) })
+                    MessageBubble(
+                        message = message,
+                        onRetryClick = { viewModel.retryFailedMessage(message.id, message.text) }
+                    )
                 }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -152,10 +157,14 @@ fun ChatScreen(
 
 @Composable
 fun MessageBubble(
-    message: ChatMessage,
+    message: ChatMessageUiModel,
     modifier: Modifier = Modifier,
     onRetryClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val viewModel = hiltViewModel<ChatViewModel>()
+    val markdownRenderer = viewModel.getMarkdownRenderer()
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -165,8 +174,17 @@ fun MessageBubble(
         Column(
             horizontalAlignment = if (message.isFromMe) Alignment.End else Alignment.Start
         ) {
-            Text(
-                text = message.text,
+            AndroidView(
+                factory = { ctx ->
+                    TextView(ctx).apply {
+                        setPadding(35, 35, 35, 35)
+                        setLineSpacing(0f, 1.3f)
+                    }
+                },
+                update = { textView ->
+                    textView.text = markdownRenderer.render(context, message.text)
+                    textView.setTextColor(ContextCompat.getColor(context, android.R.color.black))
+                },
                 modifier = Modifier
                     .widthIn(max = 250.dp)
                     .clip(
@@ -181,15 +199,9 @@ fun MessageBubble(
                         if (message.isFromMe) {
                             MaterialTheme.colorScheme.primary
                         } else {
-                            MaterialTheme.colorScheme.surfaceVariant
+                            MaterialTheme.colorScheme.secondary
                         }
                     )
-                    .padding(12.dp),
-                color = if (message.isFromMe) {
-                    MaterialTheme.colorScheme.onPrimary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
             )
             if (message.isFromMe) {
                 MessageStatusIcon(status = message.status, onRetryClick = onRetryClick)
@@ -200,17 +212,17 @@ fun MessageBubble(
 
 @Composable
 private fun MessageStatusIcon(
-    status: MessageStatus,
+    status: MessageStatusUiModel,
     modifier: Modifier = Modifier,
     onRetryClick: () -> Unit = {}
 ) {
-    val (icon, contentDescription) = when (status) {
-        MessageStatus.SENDING -> Pair("⏳", "Отправка")
-        MessageStatus.SENT -> Pair("✓", "Отправлено")
-        MessageStatus.ERROR -> Pair("⟳", "Повторить")
+    val icon = when (status) {
+        MessageStatusUiModel.SENDING -> "⏳"
+        MessageStatusUiModel.SENT -> "✓"
+        MessageStatusUiModel.ERROR -> "⟳"
     }
 
-    if (status == MessageStatus.ERROR) {
+    if (status == MessageStatusUiModel.ERROR) {
         IconButton(onClick = onRetryClick) {
             Text(
                 text = icon,
@@ -224,9 +236,9 @@ private fun MessageStatusIcon(
             modifier = modifier.padding(top = 4.dp, end = 4.dp),
             style = MaterialTheme.typography.labelSmall,
             color = when (status) {
-                MessageStatus.SENDING -> MaterialTheme.colorScheme.onSurfaceVariant
-                MessageStatus.SENT -> MaterialTheme.colorScheme.onPrimary
-                MessageStatus.ERROR -> MaterialTheme.colorScheme.error
+                MessageStatusUiModel.SENDING -> MaterialTheme.colorScheme.onSurfaceVariant
+                MessageStatusUiModel.SENT -> MaterialTheme.colorScheme.onPrimary
+                MessageStatusUiModel.ERROR -> MaterialTheme.colorScheme.error
             }
         )
     }
