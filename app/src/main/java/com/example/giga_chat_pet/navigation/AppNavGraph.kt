@@ -9,9 +9,11 @@ import androidx.navigation.navArgument
 import com.example.giga_chat_pet.ui.chat.ChatScreen
 import com.example.giga_chat_pet.ui.chatlist.ChatListScreen
 import com.example.giga_chat_pet.ui.login.LoginScreen
+import com.example.giga_chat_pet.ui.profile.ProfileScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
+    object Profile : Screen("profile")
     object ChatList : Screen("chat_list")
     object Chat : Screen("chat/{conversationId}") {
         fun createRoute(conversationId: Long) = "chat/$conversationId"
@@ -36,10 +38,20 @@ fun AppNavGraph(
                 }
             )
         }
+        composable(Screen.Profile.route) {
+            ProfileScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
         composable(Screen.ChatList.route) {
             ChatListScreen(
                 onNavigateToChat = { conversationId ->
                     navController.navigate(Screen.Chat.createRoute(conversationId))
+                },
+                onNavigateToProfile = {
+                    navController.navigate(Screen.Profile.route)
                 }
             )
         }

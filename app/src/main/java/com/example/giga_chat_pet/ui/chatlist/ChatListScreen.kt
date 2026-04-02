@@ -63,6 +63,7 @@ import java.util.Locale
 fun ChatListScreen(
     modifier: Modifier = Modifier,
     onNavigateToChat: (Long) -> Unit,
+    onNavigateToProfile: () -> Unit,
     viewModel: ChatListViewModel = hiltViewModel()
 ) {
     val conversations = viewModel.conversations.collectAsLazyPagingItems()
@@ -106,6 +107,13 @@ fun ChatListScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToProfile) {
+                        Icon(
+                            painter = painterResource(android.R.drawable.ic_menu_myplaces),
+                            contentDescription = "Профиль",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                     IconButton(onClick = {
                         isSearchActive = !isSearchActive
                         if (!isSearchActive) {

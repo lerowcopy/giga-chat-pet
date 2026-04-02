@@ -1,11 +1,12 @@
 package com.example.giga_chat_pet.ui.login
 
 import android.app.Application
-import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.giga_chat_pet.data.local.UserProfileDao
+import com.example.giga_chat_pet.data.local.UserProfileData
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,10 +18,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    application: Application
+    application: Application,
+    private val userProfileDao: UserProfileDao
 ) : AndroidViewModel(application) {
 
-    private val connectivityManager = application.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private val connectivityManager = application.getSystemService(ConnectivityManager::class.java)
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
@@ -69,6 +71,19 @@ class LoginViewModel @Inject constructor(
             .addOnCompleteListener { task ->
                 _uiState.value = _uiState.value.copy(isLoading = false)
                 if (task.isSuccessful) {
+                    val user = auth.currentUser
+                    if (user != null) {
+                        viewModelScope.launch {
+                            val userProfile = UserProfileData(
+                                uid = user.uid,
+                                email = user.email ?: "",
+                                displayName = user.displayName,
+                                photoUrl = user.photoUrl?.toString(),
+                                createdAt = user.metadata?.creationTimestamp ?: System.currentTimeMillis()
+                            )
+                            userProfileDao.insertUserProfile(userProfile)
+                        }
+                    }
                     _uiState.value = _uiState.value.copy(navigationToMain = true)
                 } else {
                     val errorMessage = task.exception?.let { e ->
@@ -108,6 +123,19 @@ class LoginViewModel @Inject constructor(
             .addOnCompleteListener { task ->
                 _uiState.value = _uiState.value.copy(isLoading = false)
                 if (task.isSuccessful) {
+                    val user = auth.currentUser
+                    if (user != null) {
+                        viewModelScope.launch {
+                            val userProfile = UserProfileData(
+                                uid = user.uid,
+                                email = user.email ?: "",
+                                displayName = user.displayName,
+                                photoUrl = user.photoUrl?.toString(),
+                                createdAt = user.metadata?.creationTimestamp ?: System.currentTimeMillis()
+                            )
+                            userProfileDao.insertUserProfile(userProfile)
+                        }
+                    }
                     _uiState.value = _uiState.value.copy(navigationToMain = true)
                 } else {
                     val errorMessage = task.exception?.let { e ->
