@@ -5,6 +5,7 @@ import com.example.giga_chat_pet.data.api.ChatApiService
 import com.example.giga_chat_pet.data.remote.TokenApi
 import com.example.giga_chat_pet.data.remote.TokenManager
 import com.example.giga_chat_pet.data.remote.buildSslOkHttpClient
+import com.google.firebase.auth.FirebaseAuth
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,6 +19,12 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth {
+        return FirebaseAuth.getInstance()
+    }
 
     @Provides
     @Singleton
