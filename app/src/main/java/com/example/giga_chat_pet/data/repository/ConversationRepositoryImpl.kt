@@ -6,13 +6,10 @@ import androidx.paging.PagingData
 import androidx.paging.map
 import com.example.giga_chat_pet.data.local.ChatDatabase
 import com.example.giga_chat_pet.data.local.LocalConversation
-import com.example.giga_chat_pet.data.local.LocalMessage
-import com.example.giga_chat_pet.data.local.MessageStatus as LocalMessageStatus
+import com.example.giga_chat_pet.data.mapper.ChatMessageMapper
 import com.example.giga_chat_pet.data.mapper.LocalConversationToConversation
-import com.example.giga_chat_pet.data.mapper.LocalMessageToChatMessage
 import com.example.giga_chat_pet.domain.model.ChatMessage
 import com.example.giga_chat_pet.domain.model.Conversation
-import com.example.giga_chat_pet.domain.model.MessageStatus
 import com.example.giga_chat_pet.domain.repository.ConversationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -78,7 +75,7 @@ class ConversationRepositoryImpl @Inject constructor(
 
     override fun getConversationMessages(conversationId: Long): Flow<List<ChatMessage>> {
         return messageDao.getMessagesByConversationId(conversationId).map { entities ->
-            entities.map { LocalMessageToChatMessage.map(it) }
+            entities.map { ChatMessageMapper.toDomain(it) }
         }
     }
 }

@@ -17,13 +17,14 @@ object ChatMessageMapper {
         )
     }
 
-    fun toLocal(domain: ChatMessage): LocalMessage {
+    fun toLocal(domain: ChatMessage, conversationId: Long): LocalMessage {
         return LocalMessage(
             id = domain.id,
             text = domain.text,
             isFromMe = domain.isFromMe,
             timestamp = domain.timestamp,
-            status = domain.status.toLocalStatus()
+            status = domain.status.toLocalStatus(),
+            conversationId = conversationId
         )
     }
 
