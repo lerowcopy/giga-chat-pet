@@ -6,14 +6,14 @@ Android-приложение на Kotlin + Jetpack Compose с авторизац
 ## Скриншоты
 
 <div align="center">
-  <img src="docs/screenshots/photo_1_2026-04-08_22-49-52.jpg" width="300" />
-  <img src="docs/screenshots/photo_2_2026-04-08_22-49-52.jpg" width="300" />
-  <img src="docs/screenshots/photo_3_2026-04-08_22-49-52.jpg" width="300" />
-  <img src="docs/screenshots/photo_4_2026-04-08_22-49-52.jpg" width="300" />
-  <img src="docs/screenshots/photo_5_2026-04-08_22-49-52.jpg" width="300" />
-  <img src="docs/screenshots/photo_6_2026-04-08_22-49-52.jpg" width="300" />
-  <img src="docs/screenshots/photo_7_2026-04-08_22-49-52.jpg" width="300" />
-  <img src="docs/screenshots/photo_8_2026-04-08_22-49-52.jpg" width="300" />
+  <img src="docs/screenshots/photo_1_2026-04-08_22-49-52.jpg" width="200" />
+  <img src="docs/screenshots/photo_2_2026-04-08_22-49-52.jpg" width="200" />
+  <img src="docs/screenshots/photo_3_2026-04-08_22-49-52.jpg" width="200" />
+  <img src="docs/screenshots/photo_4_2026-04-08_22-49-52.jpg" width="200" />
+  <img src="docs/screenshots/photo_5_2026-04-08_22-49-52.jpg" width="200" />
+  <img src="docs/screenshots/photo_6_2026-04-08_22-49-52.jpg" width="200" />
+  <img src="docs/screenshots/photo_7_2026-04-08_22-49-52.jpg" width="200" />
+  <img src="docs/screenshots/photo_8_2026-04-08_22-49-52.jpg" width="200" />
 </div>
 ---
 
