@@ -1,6 +1,21 @@
-# Giga Chat Pet
+﻿# Giga Chat Pet
 
 Android-приложение на Kotlin + Jetpack Compose с авторизацией через Firebase и чат-интерфейсом для GigaChat API.
+
+---
+## Скриншоты
+
+<div align="center">
+  <img src="docs/screenshots/photo_1_2026-04-08_22-49-52.jpg" width="300" />
+  <img src="docs/screenshots/photo_2_2026-04-08_22-49-52.jpg" width="300" />
+  <img src="docs/screenshots/photo_3_2026-04-08_22-49-52.jpg" width="300" />
+  <img src="docs/screenshots/photo_4_2026-04-08_22-49-52.jpg" width="300" />
+  <img src="docs/screenshots/photo_5_2026-04-08_22-49-52.jpg" width="300" />
+  <img src="docs/screenshots/photo_6_2026-04-08_22-49-52.jpg" width="300" />
+  <img src="docs/screenshots/photo_7_2026-04-08_22-49-52.jpg" width="300" />
+  <img src="docs/screenshots/photo_8_2026-04-08_22-49-52.jpg" width="300" />
+</div>
+---
 
 ## Что умеет приложение
 
